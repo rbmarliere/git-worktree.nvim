@@ -108,11 +108,17 @@ function M.toplevel_dir()
     return table.concat(stdout, '')
 end
 
-function M.has_branch(branch, cb)
+function M.has_branch(branch, remotes, cb)
     local found = false
+
+    local args = { 'branch' }
+    if remotes then
+        table.insert(args, '--remotes')
+    end
+
     local job = Job:new {
         command = 'git',
-        args = { 'branch' },
+        args = args,
         on_stdout = function(_, data)
             -- remove  markere on current branch
             data = data:gsub('*', '')
@@ -131,8 +137,10 @@ end
 --- @param path string
 --- @param branch string
 --- @param found_branch boolean
+--- @param upstream string
+--- @param found_upstream boolean
 --- @return Job
-function M.create_worktree_job(path, branch, found_branch)
+function M.create_worktree_job(path, branch, found_branch, upstream, found_upstream)
     local worktree_add_cmd = 'git'
     local worktree_add_args = { 'worktree', 'add' }
 
@@ -143,6 +151,11 @@ function M.create_worktree_job(path, branch, found_branch)
     else
         table.insert(worktree_add_args, path)
         table.insert(worktree_add_args, branch)
+    end
+
+    if found_upstream then
+        table.insert(worktree_add_args, '--track')
+        table.insert(worktree_add_args, upstream)
     end
 
     return Job:new {
