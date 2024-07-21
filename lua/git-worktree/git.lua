@@ -195,7 +195,7 @@ end
 --- @return Job
 function M.setbranch_job(path, branch, upstream)
     local set_branch_cmd = 'git'
-    local set_branch_args = { 'branch', string.format('--set-upstream-to=%s/%s', upstream, branch) }
+    local set_branch_args = { 'branch', branch, string.format('--set-upstream-to=%s', upstream) }
     return Job:new {
         command = set_branch_cmd,
         args = set_branch_args,

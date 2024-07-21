@@ -108,13 +108,14 @@ end
 -- @return nil
 local create_input_prompt = function(cb)
     local subtree = vim.fn.input('Path to subtree > ')
-    cb(subtree)
+    local upstream = vim.fn.input('Upstream > ')
+    cb(subtree, upstream)
 end
 
 -- Create a worktree
 -- @param opts table: the options for the telescope picker (optional)
 -- @return nil
-local create_worktree = function(opts)
+local telescope_create_worktree = function(opts)
     opts = opts or {}
     opts.attach_mappings = function()
         actions.select_default:replace(function(prompt_bufnr, _)
@@ -129,11 +130,14 @@ local create_worktree = function(opts)
                 return
             end
 
-            create_input_prompt(function(name)
+            create_input_prompt(function(name, upstream)
                 if name == '' then
                     name = branch
                 end
-                git_worktree.create_worktree(name, branch)
+                if upstream == '' then
+                    upstream = branch
+                end
+                git_worktree.create_worktree(name, branch, upstream)
             end)
         end)
 
@@ -235,6 +239,6 @@ end
 return require('telescope').register_extension {
     exports = {
         git_worktree = telescope_git_worktree,
-        create_git_worktree = create_worktree,
+        create_git_worktree = telescope_create_worktree,
     },
 }
