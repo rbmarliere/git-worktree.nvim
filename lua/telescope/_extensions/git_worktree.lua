@@ -145,7 +145,7 @@ end
 -- Create a worktree
 -- @param opts table: the options for the telescope picker (optional)
 -- @return nil
-local create_worktree = function(opts)
+local telescope_create_worktree = function(opts)
     git_worktree.switch_worktree(nil)
 
     opts = opts or {}
@@ -291,6 +291,6 @@ end
 return require('telescope').register_extension {
     exports = {
         git_worktree = telescope_git_worktree,
-        create_git_worktree = create_worktree,
+        create_git_worktree = telescope_create_worktree,
     },
 }
