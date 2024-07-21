@@ -135,7 +135,7 @@ function M.create(path, branch, upstream)
 
                 rebase:after(function()
                     if rebase.code ~= 0 then
-                        Log.devel("Rebase failed, but that's ok.")
+                        Log.debug("Rebase failed, but that's ok.")
                     end
 
                     vim.schedule(function()
