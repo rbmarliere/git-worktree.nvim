@@ -107,7 +107,8 @@ end
 -- @return nil
 local create_input_prompt = function(cb)
     local subtree = vim.fn.input('Path to subtree > ')
-    cb(subtree)
+    local upstream = vim.fn.input('Upstream > ')
+    cb(subtree, upstream)
 end
 
 -- Create a worktree
@@ -128,11 +129,14 @@ local create_worktree = function(opts)
                 return
             end
 
-            create_input_prompt(function(name)
+            create_input_prompt(function(name, upstream)
                 if name == '' then
                     name = branch
                 end
-                git_worktree.create_worktree(name, branch)
+                if upstream == '' then
+                    upstream = branch
+                end
+                git_worktree.create_worktree(name, branch, upstream)
             end)
         end)
 
