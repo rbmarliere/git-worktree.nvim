@@ -106,9 +106,33 @@ end
 -- Create a prompt to get the path of the new worktree
 -- @param cb function: the callback to call with the path
 -- @return nil
-local create_input_prompt = function(cb)
-    local subtree = vim.fn.input('Path to subtree > ')
-    cb(subtree)
+local create_input_prompt = function(opts, cb)
+    opts = opts or {}
+    opts.pattern = nil -- show all branches that can be tracked
+
+    local path = vim.fn.input('Path to subtree > ', opts.branch)
+
+    local branches = vim.fn.systemlist('git branch --all')
+    if #branches == 0 then
+        cb(path, nil)
+    end
+
+    local confirmed = vim.fn.input('Track an upstream? [y/n]: ')
+    if string.sub(string.lower(confirmed), 0, 1) == 'y' then
+        opts.attach_mappings = function()
+            actions.select_default:replace(function(prompt_bufnr, _)
+                local selected_entry = action_state.get_selected_entry()
+                local current_line = action_state.get_current_line()
+                actions.close(prompt_bufnr)
+                local upstream = selected_entry ~= nil and selected_entry.value or current_line
+                cb(path, upstream)
+            end)
+            return true
+        end
+        require('telescope.builtin').git_branches(opts)
+    else
+        cb(path, nil)
+    end
 end
 
 -- Create a worktree
@@ -116,29 +140,51 @@ end
 -- @return nil
 local create_worktree = function(opts)
     opts = opts or {}
-    opts.attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr, _)
-            local selected_entry = action_state.get_selected_entry()
-            local current_line = action_state.get_current_line()
+    -- TODO: Parse this as an user option.
+    -- opts.pattern = 'refs/heads' -- only show local branches
 
-            actions.close(prompt_bufnr)
+    -- TODO: Enable detached HEAD worktree creation, but for this the telescope
+    -- picker git_branches must show refs/tags.
 
-            local branch = selected_entry ~= nil and selected_entry.value or current_line
-
-            if branch == nil then
-                return
-            end
-
-            create_input_prompt(function(name)
-                if name == '' then
-                    name = branch
-                end
-                git_worktree.create_worktree(name, branch)
-            end)
+    local create_branch = function(prompt_bufnr, _)
+        -- if current_line is still not enough to filter everything but user
+        -- still wants to use it as the new branch name, without selecting anything
+        local branch = action_state.get_current_line()
+        actions.close(prompt_bufnr)
+        if branch == nil then
+            return
+        end
+        opts.branch = branch
+        create_input_prompt(opts, function(path, upstream)
+            git_worktree.create_worktree(path, branch, upstream)
         end)
+    end
 
+    local select_or_create_branch = function(prompt_bufnr, _)
+        local selected_entry = action_state.get_selected_entry()
+        local current_line = action_state.get_current_line()
+        actions.close(prompt_bufnr)
+        -- selected_entry can be null if current_line filters everything
+        -- and there's no branch shown
+        local branch = selected_entry ~= nil and selected_entry.value or current_line
+        if branch == nil then
+            return
+        end
+        opts.branch = branch
+        create_input_prompt(opts, function(path, upstream)
+            git_worktree.create_worktree(path, branch, upstream)
+        end)
+    end
+
+    opts.attach_mappings = function(_, map)
+        map({ 'i', 'n' }, '<tab>', create_branch)
+        actions.select_default:replace(select_or_create_branch)
         return true
     end
+
+    -- TODO: A corner case here is that of a new bare repo which has no branch nor tree,
+    -- but user may want to create one using this picker when creating the first worktree.
+    -- Perhaps telescope git_branches should only be used for selecting the upstream to track.
     require('telescope.builtin').git_branches(opts)
 end
 
