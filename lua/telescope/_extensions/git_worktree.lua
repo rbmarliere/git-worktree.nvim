@@ -237,9 +237,9 @@ local telescope_git_worktree = function(opts)
         parse_line(line)
     end
 
-    if #results == 0 then
-        return
-    end
+    -- if #results == 0 then
+    --     return
+    -- end
 
     local displayer = require('telescope.pickers.entry_display').create {
         separator = ' ',
@@ -275,6 +275,12 @@ local telescope_git_worktree = function(opts)
             attach_mappings = function(_, map)
                 action_set.select:replace(switch_worktree)
 
+                map('i', '<m-c>', function()
+                    telescope_create_worktree {}
+                end)
+                map('n', '<m-c>', function()
+                    telescope_create_worktree {}
+                end)
                 map('i', '<c-d>', delete_worktree)
                 map('n', '<c-d>', delete_worktree)
                 map('i', '<c-f>', toggle_forced_deletion)
