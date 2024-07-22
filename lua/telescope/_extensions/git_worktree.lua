@@ -281,8 +281,8 @@ local telescope_git_worktree = function(opts)
                 map('n', '<m-c>', function()
                     telescope_create_worktree {}
                 end)
-                map('i', '<c-d>', delete_worktree)
-                map('n', '<c-d>', delete_worktree)
+                map('i', '<m-d>', delete_worktree)
+                map('n', '<m-d>', delete_worktree)
                 map('i', '<c-f>', toggle_forced_deletion)
                 map('n', '<c-f>', toggle_forced_deletion)
 
