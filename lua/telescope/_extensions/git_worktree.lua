@@ -48,6 +48,7 @@ end
 -- @return nil
 local delete_success_handler = function()
     force_next_deletion = false
+    -- TODO: reopen git_worktree
 end
 
 -- Handler for failed deletion
@@ -139,11 +140,7 @@ end
 -- @param opts table: the options for the telescope picker (optional)
 -- @return nil
 local telescope_create_worktree = function(opts)
-    opts = opts or {}
-    opts.attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr, _)
-            local selected_entry = action_state.get_selected_entry()
-            local current_line = action_state.get_current_line()
+    git_worktree.switch_worktree(nil)
 
             actions.close(prompt_bufnr)
 
@@ -166,6 +163,7 @@ local telescope_create_worktree = function(opts)
 
         return true
     end
+
     require('telescope.builtin').git_branches(opts)
 end
 
