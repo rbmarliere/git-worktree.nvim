@@ -142,25 +142,44 @@ end
 local telescope_create_worktree = function(opts)
     git_worktree.switch_worktree(nil)
 
-            actions.close(prompt_bufnr)
+    opts = opts or {}
+    opts.pattern = 'refs/heads' -- only show local branches
 
-            local branch = selected_entry ~= nil and selected_entry.value or current_line
+    -- TODO: enable detached HEAD worktree creation
 
-            if branch == nil then
-                return
-            end
-
-            create_input_prompt(function(name, upstream)
-                if name == '' then
-                    name = branch
-                end
-                if upstream == '' then
-                    upstream = branch
-                end
-                git_worktree.create_worktree(name, branch, upstream)
-            end)
+    local create_branch = function(prompt_bufnr, _)
+        -- if current_line is still not enough to filter everything but user
+        -- still wants to use it as the new branch name
+        local branch = action_state.get_current_line()
+        actions.close(prompt_bufnr)
+        if branch == nil then
+            return
+        end
+        opts.branch = branch
+        create_input_prompt(opts, function(path, upstream)
+            git_worktree.create_worktree(path, branch, upstream)
         end)
+    end
 
+    local select_or_create_branch = function(prompt_bufnr, _)
+        local selected_entry = action_state.get_selected_entry()
+        local current_line = action_state.get_current_line()
+        actions.close(prompt_bufnr)
+        -- selected_entry can be null if current_line filters everything
+        -- and there's no branch shown
+        local branch = selected_entry ~= nil and selected_entry.value or current_line
+        if branch == nil then
+            return
+        end
+        opts.branch = branch
+        create_input_prompt(opts, function(path, upstream)
+            git_worktree.create_worktree(path, branch, upstream)
+        end)
+    end
+
+    opts.attach_mappings = function(_, map)
+        map({ 'i', 'n' }, '<tab>', create_branch)
+        actions.select_default:replace(select_or_create_branch)
         return true
     end
 
