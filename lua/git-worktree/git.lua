@@ -8,41 +8,44 @@ local M = {}
 -- A lot of this could be cleaned up if there was better job -> job -> function
 -- communication.  That should be doable here in the near future
 ---
----@param path_str string path to the worktree to check. if relative, then path from the git root dir
+---@param path_str string path to the worktree to check
+---@param branch string? branch the worktree is associated with
 ---@param cb any
-function M.has_worktree(path_str, cb)
+function M.has_worktree(path_str, branch, cb)
     local found = false
-    local path = Path:new(path_str)
+    local path
 
     if path_str == '.' then
         path_str = vim.loop.cwd()
-        path = Path:new(path_str)
     end
+
+    path = Path:new(path_str)
+    if not path:is_absolute() then
+        path = Path:new(string.format('%s' .. Path.path.sep .. '%s', vim.loop.cwd(), path_str))
+    end
+    path = path:absolute()
+
+    Log.debug('has_worktree: %s %s', path, branch)
 
     local job = Job:new {
         command = 'git',
-        args = { 'worktree', 'list' },
-        on_stdout = function(_, data)
-            local list_data = {}
-            for section in data:gmatch('%S+') do
-                table.insert(list_data, section)
+        args = { 'worktree', 'list', '--porcelain' },
+        on_stdout = function(_, line)
+            if line:match('^worktree ') then
+                local current_worktree = Path:new(line:match('^worktree (.+)$')):absolute()
+                Log.debug('current_worktree: "%s"', current_worktree)
+                if path == current_worktree then
+                    found = true
+                    return
+                end
+            elseif branch ~= nil and line:match('^branch ') then
+                local worktree_branch = line:match('^branch (.+)$')
+                Log.debug('worktree_branch: %s', worktree_branch)
+                if worktree_branch == 'refs/heads/' .. branch then
+                    found = true
+                    return
+                end
             end
-
-            data = list_data[1]
-
-            local start
-            if path:is_absolute() then
-                start = data == path_str
-            else
-                local worktree_path = Path:new(string.format('%s' .. Path.path.sep .. '%s', vim.loop.cwd(), path_str))
-                worktree_path = worktree_path:absolute()
-                start = data == worktree_path
-            end
-
-            -- TODO: This is clearly a hack (do not think we need this anymore?)
-            --local start_with_head = string.find(data, string.format('[heads/%s]', path), 1, true)
-            found = found or start
-            Log.debug('found: %s', found)
         end,
         cwd = vim.loop.cwd(),
     }

@@ -82,7 +82,11 @@ function M.switch(path)
         if path == vim.loop.cwd() then
             return
         end
-        Log.debug('has worktree')
+        Git.has_worktree(path, nil, function(found)
+            if not found then
+                Log.error('Worktree does not exists, please create it first %s ', path)
+                return
+            end
 
             vim.schedule(function()
                 local prev_path = change_dirs(path)
@@ -107,9 +111,9 @@ function M.create(path, branch, upstream)
 
     -- M.setup_git_info()
 
-    Git.has_worktree(path, function(found)
+    Git.has_worktree(path, branch, function(found)
         if found then
-            Log.error('worktree already exists')
+            Log.error('Path "%s" or branch "%s" already in use.', path, branch)
             return
         end
 
@@ -149,12 +153,10 @@ function M.delete(path, force, opts)
         opts = {}
     end
 
-    Git.has_worktree(path, function(found)
-        Log.info('OMG here')
+    Git.has_worktree(path, nil, function(found)
         if not found then
             Log.error('Worktree %s does not exist', path)
-        else
-            Log.info('Worktree %s does exist', path)
+            return
         end
 
         local delete = Git.delete_worktree_job(path, force)
