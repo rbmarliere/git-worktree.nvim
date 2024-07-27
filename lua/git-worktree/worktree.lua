@@ -117,17 +117,16 @@ function M.create(path, branch, upstream)
             return
         end
 
-        Git.has_branch(branch, false, function(found_branch)
-            Config = require('git-worktree.config')
-            local worktree_path
-            if Path:new(path):is_absolute() then
-                worktree_path = path
-            else
-                worktree_path = Path:new(vim.loop.cwd(), path):absolute()
-            end
-
-            Git.has_branch(upstream, true, function(found_upstream)
+        Git.has_branch(branch, nil, function(found_branch)
+            Git.has_branch(upstream, { '--all' }, function(found_upstream)
                 local create_wt_job = Git.create_worktree_job(path, branch, found_branch, upstream, found_upstream)
+
+                Log.debug('Found branch %s? %s', branch, found_branch)
+                Log.debug('Found upstream %s? %s', upstream, found_upstream)
+                if found_branch and found_upstream and branch ~= upstream then
+                    local set_remote = Git.setbranch_job(path, branch, upstream)
+                    create_wt_job:and_then_on_success(set_remote)
+                end
 
                 create_wt_job:after(function()
                     vim.schedule(function()

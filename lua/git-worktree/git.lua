@@ -111,20 +111,21 @@ function M.toplevel_dir()
     return table.concat(stdout, '')
 end
 
-function M.has_branch(branch, remotes, cb)
+function M.has_branch(branch, opts, cb)
     local found = false
-
     local args = { 'branch' }
-    if remotes then
-        table.insert(args, '--remotes')
+    opts = opts or {}
+    for i = 1, #opts do
+        args[i+1] = opts[i]
     end
 
     local job = Job:new {
         command = 'git',
         args = args,
         on_stdout = function(_, data)
-            -- remove  markere on current branch
+            -- remove  marker on current branch
             data = data:gsub('*', '')
+            data = data:gsub('remotes/', '')
             data = vim.trim(data)
             found = found or data == branch
         end,
