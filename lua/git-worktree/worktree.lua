@@ -14,6 +14,15 @@ local function get_absolute_path(path)
 end
 
 local function change_dirs(path)
+    if path == nil then
+        local out = vim.fn.systemlist('git rev-parse --git-common-dir')
+        if vim.v.shell_error ~= 0 then
+            Log.error('Could not parse common dir')
+            return
+        end
+        path = out[1]
+    end
+
     Log.info('changing dirs:  %s ', path)
     local worktree_path = get_absolute_path(path)
     local previous_worktree = vim.loop.cwd()
@@ -25,7 +34,7 @@ local function change_dirs(path)
         Log.debug('Changing to directory  %s', worktree_path)
         vim.cmd(cmd)
     else
-        Log.error('Could not chang to directory: %s', worktree_path)
+        Log.error('Could not change to directory: %s', worktree_path)
     end
 
     if Config.clearjumps_on_change then
@@ -60,12 +69,18 @@ local M = {}
 --- SWITCH ---
 
 --Switch the current worktree
----@param path string
+---@param path string?
 function M.switch(path)
-    Git.has_worktree(path, function(found)
-        Log.debug('test')
-        if not found then
-            Log.error('worktree does not exists, please create it first %s ', path)
+    if path == nil then
+        change_dirs(path)
+        -- TODO: do we need to send an event when getting out of a tree?
+        -- vim.schedule(function()
+        --     local prev_path = change_dirs(path)
+        --     Hooks.emit(Hooks.type.SWITCH, path, prev_path)
+        -- end)
+    else
+        if path == vim.loop.cwd() then
+            return
         end
         Git.has_worktree(path, nil, function(found)
             if not found then
@@ -73,11 +88,12 @@ function M.switch(path)
                 return
             end
 
-        vim.schedule(function()
-            local prev_path = change_dirs(path)
-            Hooks.emit(Hooks.type.SWITCH, path, prev_path)
+            vim.schedule(function()
+                local prev_path = change_dirs(path)
+                Hooks.emit(Hooks.type.SWITCH, path, prev_path)
+            end)
         end)
-    end)
+    end
 end
 
 --- CREATE ---

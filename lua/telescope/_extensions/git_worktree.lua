@@ -16,6 +16,9 @@ local force_next_deletion = false
 -- @return string: the path of the selected worktree
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
+    if selection == nil then
+        return
+    end
     return selection.path
 end
 
@@ -25,9 +28,11 @@ end
 local switch_worktree = function(prompt_bufnr)
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
-    if worktree_path ~= nil then
-        git_worktree.switch_worktree(worktree_path)
+    if worktree_path == nil then
+        vim.print("No worktree selected")
+        return
     end
+    git_worktree.switch_worktree(worktree_path)
 end
 
 -- Toggle the forced deletion of the next worktree
@@ -93,6 +98,8 @@ local delete_worktree = function(prompt_bufnr)
         return
     end
 
+    git_worktree.switch_worktree(nil)
+
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path ~= nil then
@@ -139,6 +146,8 @@ end
 -- @param opts table: the options for the telescope picker (optional)
 -- @return nil
 local create_worktree = function(opts)
+    git_worktree.switch_worktree(nil)
+
     opts = opts or {}
     -- TODO: Parse this as an user option.
     -- opts.pattern = 'refs/heads' -- only show local branches
