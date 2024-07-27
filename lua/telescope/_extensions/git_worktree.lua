@@ -106,10 +106,33 @@ end
 -- Create a prompt to get the path of the new worktree
 -- @param cb function: the callback to call with the path
 -- @return nil
-local create_input_prompt = function(cb)
-    local subtree = vim.fn.input('Path to subtree > ')
-    local upstream = vim.fn.input('Upstream > ')
-    cb(subtree, upstream)
+local create_input_prompt = function(opts, cb)
+    opts = opts or {}
+    opts.pattern = nil -- show all branches that can be tracked
+
+    local path = vim.fn.input('Path to subtree > ', opts.branch)
+
+    local branches = vim.fn.systemlist('git branch --all')
+    if #branches == 0 then
+        cb(path, nil)
+    end
+
+    local confirmed = vim.fn.input('Track an upstream? [y/n]: ')
+    if string.sub(string.lower(confirmed), 0, 1) == 'y' then
+        opts.attach_mappings = function()
+            actions.select_default:replace(function(prompt_bufnr, _)
+                local selected_entry = action_state.get_selected_entry()
+                local current_line = action_state.get_current_line()
+                actions.close(prompt_bufnr)
+                local upstream = selected_entry ~= nil and selected_entry.value or current_line
+                cb(path, upstream)
+            end)
+            return true
+        end
+        require('telescope.builtin').git_branches(opts)
+    else
+        cb(path, nil)
+    end
 end
 
 -- Create a worktree
