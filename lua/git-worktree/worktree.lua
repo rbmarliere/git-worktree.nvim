@@ -156,6 +156,8 @@ function M.delete(path, force, opts)
         opts = {}
     end
 
+    local branch = Git.parse_head(path)
+
     Git.has_worktree(path, nil, function(found)
         if not found then
             Log.error('Worktree %s does not exist', path)
@@ -167,7 +169,7 @@ function M.delete(path, force, opts)
             Log.info('delete after success')
             Hooks.emit(Hooks.type.DELETE, path)
             if opts.on_success then
-                opts.on_success()
+                opts.on_success({ branch = branch })
             end
         end))
 

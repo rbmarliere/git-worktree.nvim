@@ -251,4 +251,56 @@ function M.rebase_job(path)
     }
 end
 
+
+--- @param path string
+--- @return string|nil
+function M.parse_head(path)
+    local job =  Job:new {
+        command = 'git',
+        args = { 'rev-parse', '--abbrev-ref', 'HEAD' },
+        cwd = path,
+        on_start = function()
+            Log.debug('git rev-parse --abbrev-ref HEAD')
+        end,
+    }
+
+    local stdout, code = job:sync()
+    if code ~= 0 then
+        Log.error(
+            'Error in parsing the HEAD: code:'
+                .. tostring(code)
+                .. ' out: '
+                .. table.concat(stdout, '')
+                .. '.'
+        )
+        return nil
+    end
+
+    return table.concat(stdout, '')
+end
+
+--- @param branch string
+--- @return Job|nil
+function M.delete_branch_job(branch)
+    local root = M.gitroot_dir()
+    if root == nil then
+        return nil
+    end
+
+    local default = M.parse_head(root)
+    if default == branch then
+        print('Refusing to delete default branch')
+        return nil
+    end
+
+    return Job:new {
+        command = 'git',
+        args = { 'branch', '-D', branch },
+        cwd = M.gitroot_dir(),
+        on_start = function()
+            Log.debug('git branch -D')
+        end,
+    }
+end
+
 return M

@@ -8,6 +8,7 @@ local action_state = require('telescope.actions.state')
 local conf = require('telescope.config').values
 local git_worktree = require('git-worktree')
 local Config = require('git-worktree.config')
+local Git = require('git-worktree.git')
 
 local force_next_deletion = false
 
@@ -49,39 +50,20 @@ local toggle_forced_deletion = function()
     end
 end
 
--- Handler for successful deletion
--- @return nil
-local delete_success_handler = function()
-    print('Deleted worktree')
-    force_next_deletion = false
-end
-
--- Handler for failed deletion
--- @return nil
-local delete_failure_handler = function()
-    print('Deletion failed, use <C-f> to force the next deletion')
-end
-
--- Ask the user to confirm the deletion of a worktree
--- @param forcing boolean: whether the deletion is forced
--- @return boolean: whether the deletion is confirmed
-local ask_to_confirm_deletion = function(forcing)
-    if forcing then
-        return vim.fn.input('Force deletion of worktree? [y/n]: ')
-    end
-
-    return vim.fn.input('Delete worktree? [y/n]: ')
-end
-
 -- Confirm the deletion of a worktree
 -- @param forcing boolean: whether the deletion is forced
 -- @return boolean: whether the deletion is confirmed
-local confirm_deletion = function(forcing)
+local confirm_worktree_deletion = function(forcing)
     if not Config.confirm_telescope_deletions then
         return true
     end
 
-    local confirmed = ask_to_confirm_deletion(forcing)
+    local confirmed = nil
+    if forcing then
+        confirmed = vim.fn.input('Force deletion of worktree? [y/n]: ')
+    else
+        confirmed = vim.fn.input('Delete worktree? [y/n]: ')
+    end
 
     if string.sub(string.lower(confirmed), 0, 1) == 'y' then
         return true
@@ -91,11 +73,44 @@ local confirm_deletion = function(forcing)
     return false
 end
 
+-- Confirm the deletion of a worktree
+-- @return boolean: whether the deletion is confirmed
+local confirm_branch_deletion = function()
+    local confirmed = vim.fn.input('Worktree deleted, now force deletion of branch? [y/n]: ')
+
+    if string.sub(string.lower(confirmed), 0, 1) == 'y' then
+        return true
+    end
+
+    print("Didn't delete branch")
+    return false
+end
+
+-- Handler for successful deletion
+-- @return nil
+local delete_success_handler = function(opts)
+    opts = opts or {}
+    force_next_deletion = false
+    if confirm_branch_deletion() and opts.branch ~= nil then
+        local delete_branch_job = Git.delete_branch_job(opts.branch)
+        if delete_branch_job ~= nil then
+            delete_branch_job:start()
+        end
+    end
+end
+
+-- Handler for failed deletion
+-- @return nil
+local delete_failure_handler = function()
+    print('Deletion failed, use <C-f> to force the next deletion')
+end
+
 -- Delete the selected worktree
 -- @param prompt_bufnr number: the prompt buffer number
 -- @return nil
 local delete_worktree = function(prompt_bufnr)
-    if not confirm_deletion() then
+    -- TODO: confirm_deletion(forcing)
+    if not confirm_worktree_deletion() then
         return
     end
 
