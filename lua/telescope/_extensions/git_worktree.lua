@@ -28,11 +28,11 @@ end
 -- @return nil
 local switch_worktree = function(prompt_bufnr)
     local worktree_path = get_worktree_path(prompt_bufnr)
-    actions.close(prompt_bufnr)
     if worktree_path == nil then
         vim.print('No worktree selected')
         return
     end
+    actions.close(prompt_bufnr)
     git_worktree.switch_worktree(worktree_path)
 end
 
