@@ -122,6 +122,14 @@ local create_input_prompt = function(opts, cb)
     local branches = vim.fn.systemlist('git branch --all')
     if #branches == 0 then
         cb(path, nil)
+        return
+    end
+
+    local re = string.format('git branch --remotes --list %s', opts.branch)
+    local remote_branch = vim.fn.systemlist(re)
+    if #remote_branch == 1 then
+        cb(path, nil)
+        return
     end
 
     local confirmed = vim.fn.input('Track an upstream? [y/n]: ')
@@ -147,10 +155,7 @@ end
 -- @return nil
 local telescope_create_worktree = function(opts)
     git_worktree.switch_worktree(nil)
-
     opts = opts or {}
-    -- TODO: Parse this as an user option.
-    -- opts.pattern = 'refs/heads' -- only show local branches
 
     -- TODO: Enable detached HEAD worktree creation, but for this the telescope
     -- picker git_branches must show refs/tags.
