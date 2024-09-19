@@ -113,20 +113,16 @@ end
 
 function M.has_branch(branch, opts, cb)
     local found = false
-    local args = { 'branch' }
+    local args = { 'branch', '--format=%(refname:short)' }
     opts = opts or {}
-    for i = 1, #opts do
-        args[i+1] = opts[i]
+    for _, opt in ipairs(opts) do
+        args[#args + 1] = opt
     end
 
     local job = Job:new {
         command = 'git',
         args = args,
         on_stdout = function(_, data)
-            -- remove marker on current branch
-            data = data:gsub('*', '')
-            data = data:gsub('remotes/', '')
-            data = vim.trim(data)
             found = found or data == branch
         end,
         cwd = vim.loop.cwd(),
