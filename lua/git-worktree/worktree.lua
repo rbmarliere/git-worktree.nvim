@@ -42,6 +42,7 @@ local function change_dirs(path)
         vim.cmd('clearjumps')
     end
 
+    print(string.format('Switched to %s', path))
     return previous_worktree
 end
 
@@ -73,11 +74,6 @@ local M = {}
 function M.switch(path)
     if path == nil then
         change_dirs(path)
-        -- TODO: do we need to send an event when getting out of a tree?
-        -- vim.schedule(function()
-        --     local prev_path = change_dirs(path)
-        --     Hooks.emit(Hooks.type.SWITCH, path, prev_path)
-        -- end)
     else
         if path == vim.loop.cwd() then
             return

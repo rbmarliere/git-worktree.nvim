@@ -29,7 +29,7 @@ local switch_worktree = function(prompt_bufnr)
     local worktree_path = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
     if worktree_path == nil then
-        vim.print("No worktree selected")
+        vim.print('No worktree selected')
         return
     end
     git_worktree.switch_worktree(worktree_path)
@@ -52,6 +52,7 @@ end
 -- Handler for successful deletion
 -- @return nil
 local delete_success_handler = function()
+    print('Deleted worktree')
     force_next_deletion = false
 end
 
