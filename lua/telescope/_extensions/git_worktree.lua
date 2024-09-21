@@ -9,6 +9,7 @@ local conf = require('telescope.config').values
 local git_worktree = require('git-worktree')
 local Config = require('git-worktree.config')
 local Git = require('git-worktree.git')
+local Log = require('git-worktree.logger')
 
 local force_next_deletion = false
 
@@ -91,9 +92,12 @@ end
 local delete_success_handler = function(opts)
     opts = opts or {}
     force_next_deletion = false
-    if confirm_branch_deletion() and opts.branch ~= nil then
+    if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm_branch_deletion() then
         local delete_branch_job = Git.delete_branch_job(opts.branch)
         if delete_branch_job ~= nil then
+            delete_branch_job:after_success(vim.schedule_wrap(function()
+                print('Branch deleted')
+            end))
             delete_branch_job:start()
         end
     end
@@ -134,6 +138,15 @@ local create_input_prompt = function(opts, cb)
     opts.pattern = nil -- show all branches that can be tracked
 
     local path = vim.fn.input('Path to subtree > ', opts.branch)
+    if path == '' then
+        Log.error("No worktree path provided")
+        return
+    end
+
+    if opts.branch == '' then
+        cb(path, nil)
+        return
+    end
 
     local branches = vim.fn.systemlist('git branch --all')
     if #branches == 0 then
@@ -173,17 +186,11 @@ local telescope_create_worktree = function(opts)
     git_worktree.switch_worktree(nil)
     opts = opts or {}
 
-    -- TODO: Enable detached HEAD worktree creation, but for this the telescope
-    -- picker git_branches must show refs/tags.
-
     local create_branch = function(prompt_bufnr, _)
         -- if current_line is still not enough to filter everything but user
         -- still wants to use it as the new branch name, without selecting anything
         local branch = action_state.get_current_line()
         actions.close(prompt_bufnr)
-        if branch == nil then
-            return
-        end
         opts.branch = branch
         create_input_prompt(opts, function(path, upstream)
             git_worktree.create_worktree(path, branch, upstream)
@@ -197,7 +204,8 @@ local telescope_create_worktree = function(opts)
         -- selected_entry can be null if current_line filters everything
         -- and there's no branch shown
         local branch = selected_entry ~= nil and selected_entry.value or current_line
-        if branch == nil then
+        if branch == nil or branch == '' then
+            Log.error("No branch selected")
             return
         end
         opts.branch = branch

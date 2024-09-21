@@ -135,7 +135,7 @@ function M.has_branch(branch, opts, cb)
 end
 
 --- @param path string
---- @param branch string
+--- @param branch string?
 --- @param found_branch boolean
 --- @param upstream string
 --- @param found_upstream boolean
@@ -144,18 +144,23 @@ function M.create_worktree_job(path, branch, found_branch, upstream, found_upstr
     local worktree_add_cmd = 'git'
     local worktree_add_args = { 'worktree', 'add' }
 
-    if not found_branch then
-        table.insert(worktree_add_args, '-b')
-        table.insert(worktree_add_args, branch)
+    if branch == nil then
+        table.insert(worktree_add_args, '-d')
         table.insert(worktree_add_args, path)
-
-        if found_upstream and branch ~= upstream then
-            table.insert(worktree_add_args, '--track')
-            table.insert(worktree_add_args, upstream)
-        end
     else
-        table.insert(worktree_add_args, path)
-        table.insert(worktree_add_args, branch)
+        if not found_branch then
+            table.insert(worktree_add_args, '-b')
+            table.insert(worktree_add_args, branch)
+            table.insert(worktree_add_args, path)
+
+            if found_upstream and branch ~= upstream then
+                table.insert(worktree_add_args, '--track')
+                table.insert(worktree_add_args, upstream)
+            end
+        else
+            table.insert(worktree_add_args, path)
+            table.insert(worktree_add_args, branch)
+        end
     end
 
     return Job:new {

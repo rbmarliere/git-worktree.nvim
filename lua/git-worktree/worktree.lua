@@ -113,6 +113,19 @@ function M.create(path, branch, upstream)
             return
         end
 
+        if branch == '' then
+            -- detached head
+            local create_wt_job = Git.create_worktree_job(path, nil, false, nil, false)
+            create_wt_job:after(function()
+                vim.schedule(function()
+                    Hooks.emit(Hooks.type.CREATE, path, branch, upstream)
+                    M.switch(path)
+                end)
+            end)
+            create_wt_job:start()
+            return
+        end
+
         Git.has_branch(branch, { '--remotes' }, function(found_remote_branch)
             Log.debug('Found remote branch %s? %s', branch, found_remote_branch)
             if found_remote_branch then
