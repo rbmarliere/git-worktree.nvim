@@ -1,3 +1,5 @@
+local config = require('git-worktree.config')
+
 local LogLevels = {
     TRACE = 0,
     DEBUG = 1,
@@ -29,7 +31,12 @@ local function log(level, msg)
     end
     -- vim.api.nvim_echo(msg_chunks, false, {})
     -- vim.notify(msg, level)
-    -- print(msg)
+    local current_level = LogLevels[config.log_level] or LogLevels.WARN
+    if level >= current_level then
+        vim.schedule(function()
+            vim.print(vim.trim(msg))
+        end)
+    end
 end
 
 --- @param fmt string

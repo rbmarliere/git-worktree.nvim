@@ -57,6 +57,7 @@ Example:
 >lua
 ---@type GitWorktreeConfig
 vim.g.git_worktree = {
+    log_level = 'WARN',
     change_directory_command = 'cd',
     update_on_change = true,
     update_on_change_command = 'e .',

@@ -67,7 +67,7 @@ local confirm_worktree_deletion = function(forcing)
         return true
     end
 
-    print("Didn't delete worktree")
+    vim.print("Didn't delete worktree")
     return false
 end
 
@@ -88,14 +88,15 @@ end
 local delete_success_handler = function(opts)
     opts = opts or {}
     force_next_deletion = false
-    if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm('Worktree deleted, now force deletion of branch?') then
+    if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm('Force deletion of branch?') then
+        Log.debug('deleting ' .. opts.branch)
         local delete_branch_job = Git.delete_branch_job(opts.branch)
         if delete_branch_job ~= nil then
             delete_branch_job:after_success(vim.schedule_wrap(function()
-                print('Branch deleted')
+                vim.print('Branch was deleted')
             end))
             delete_branch_job:after_failure(vim.schedule_wrap(function()
-                print('Unable to delete branch')
+                Log.error('Unable to delete branch')
             end))
             delete_branch_job:start()
         end
@@ -105,7 +106,7 @@ end
 -- Handler for failed deletion
 -- @return nil
 local delete_failure_handler = function()
-    print('Deletion failed, use <C-f> to force the next deletion')
+    vim.print('Deletion failed, use <C-f> to force the next deletion')
 end
 
 -- Delete the selected worktree
@@ -142,7 +143,7 @@ local move_success_handler = function(opts)
 
         local rename_branch_job = Git.rename_branch_job(opts.branch, new_branch)
         rename_branch_job:after_success(vim.schedule_wrap(function()
-            print('Branch renamed')
+            vim.print('Branch was renamed')
         end))
         rename_branch_job:after_failure(function()
             Log.error('Unable to rename branch')

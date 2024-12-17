@@ -124,9 +124,7 @@ require('telescope').load_extension('git_worktree')
 
 ### Debugging<a name="debugging"></a>
 
-git-worktree writes logs to a `git-worktree-nvim.log` file that resides in Neovim's cache path. (`:echo stdpath("cache")` to find where that is for you.)
-
-By default, logging is enabled for warnings and above. This can be changed by setting `vim.g.git_worktree_log_level` variable to one of the following log levels: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. Note that this would have to be done **before** git-worktree's `setup` call. Alternatively, it can be more convenient to launch Neovim with an environment variable, e.g. `> GIT_WORKTREE_NVIM_LOG=trace nvim`. In case both, `vim.g` and an environment variable are used, the log level set by the environment variable overrules. Supplying an invalid log level defaults back to warnings.
+By default, logging is enabled for warnings and above. This can be changed by setting `vim.g.git_worktree_log_level` variable to one of the following log levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `OFF`. Supplying an invalid log level defaults back to warnings.
 
 ### Troubleshooting<a name="troubleshooting"></a>
 
