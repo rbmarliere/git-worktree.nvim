@@ -113,7 +113,7 @@ end
 
 function M.has_branch(branch, opts, cb)
     local found = false
-    local args = { 'branch', '--format=%(refname:short)' }
+    local args = { 'branch', '--format=%(refname)' }
     opts = opts or {}
     for _, opt in ipairs(opts) do
         args[#args + 1] = opt
@@ -123,7 +123,8 @@ function M.has_branch(branch, opts, cb)
         command = 'git',
         args = args,
         on_stdout = function(_, data)
-            found = found or data == branch
+            local current = data:match('^refs/heads/(.+)') or data:match('^refs/remotes/(.+)')
+            found = found or current == branch
         end,
         cwd = vim.loop.cwd(),
     }
