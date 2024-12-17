@@ -93,6 +93,7 @@ local delete_success_handler = function(opts)
     opts = opts or {}
     force_next_deletion = false
     if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm_branch_deletion() then
+        Log.debug("deleting " .. opts.branch)
         local delete_branch_job = Git.delete_branch_job(opts.branch)
         if delete_branch_job ~= nil then
             delete_branch_job:after_success(vim.schedule_wrap(function()

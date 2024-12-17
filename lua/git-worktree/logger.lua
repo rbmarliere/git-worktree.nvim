@@ -29,7 +29,9 @@ local function log(level, msg)
     end
     -- vim.api.nvim_echo(msg_chunks, false, {})
     -- vim.notify(msg, level)
-    -- print(msg)
+    if level >= LogLevels.ERROR then
+        print(msg)
+    end
 end
 
 --- @param fmt string
