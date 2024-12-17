@@ -278,6 +278,29 @@ function M.parse_head(path)
     return table.concat(stdout, '')
 end
 
+--- @param path string
+--- @return string|nil
+function M.current_branch(path)
+    local job = Job:new {
+        command = 'git',
+        args = { 'branch', '--show-current' },
+        cwd = path,
+        on_start = function()
+            Log.debug('git branch --show-current')
+        end,
+    }
+
+    local stdout, code = job:sync()
+    if code ~= 0 then
+        Log.error(
+            'Error in getting current branch: code:' .. tostring(code) .. ' out: ' .. table.concat(stdout, '') .. '.'
+        )
+        return nil
+    end
+
+    return table.concat(stdout, '')
+end
+
 --- @param branch string
 --- @return Job|nil
 function M.delete_branch_job(branch)
