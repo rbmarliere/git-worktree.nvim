@@ -87,8 +87,13 @@ end
 ---@param upstream? string
 function M.create(path, branch, upstream)
     local schedule = function(cb, _path, _branch, _found_branch, _upstream, _found_upstream)
+        vim.print('Creating worktree')
         local create_wt_job = Git.create_worktree_job(_path, _branch, _found_branch, _upstream, _found_upstream)
+        create_wt_job:after_failure(vim.schedule_wrap(function()
+            Log.error('Unable to create worktree')
+        end))
         create_wt_job:after_success(vim.schedule_wrap(function()
+            vim.print('Worktree was created')
             Hooks.emit(Hooks.type.CREATE, path, branch, upstream)
             if cb then
                 cb()
@@ -159,7 +164,7 @@ function M.delete(path, force, opts)
 
         local delete = Git.delete_worktree_job(path, force)
         delete:after_success(vim.schedule_wrap(function()
-            Log.info('delete after success')
+            vim.print('Worktree was deleted')
             Hooks.emit(Hooks.type.DELETE, path)
             if opts.on_success then
                 opts.on_success { branch = branch }
@@ -167,7 +172,7 @@ function M.delete(path, force, opts)
         end))
 
         delete:after_failure(function(e)
-            Log.info('delete after failure')
+            Log.error('Unable to delete worktree')
             -- callback has to be called before failure() because failure()
             -- halts code execution
             if opts.on_failure then
@@ -206,14 +211,14 @@ function M.move(path, new_path, opts)
     reinit_submodules:after_success(vim.schedule_wrap(function()
         local repair = Git.repair_worktree_job(new_path)
         repair:after_success(vim.schedule_wrap(function()
-            Log.info('move after success')
+            vim.print('Worktree was moved')
             Hooks.emit(Hooks.type.MOVE, path)
             if opts.on_success then
                 opts.on_success { branch = branch, new_path = new_path }
             end
         end))
         repair:after_failure(function(e)
-            Log.info('move after failure')
+            Log.error('Unable to repair worktree')
             if opts.on_failure then
                 opts.on_failure(e)
             end
@@ -223,7 +228,7 @@ function M.move(path, new_path, opts)
         repair:start()
     end))
     reinit_submodules:after_failure(function(e)
-        Log.info('move after failure')
+        Log.error('Unable to init submodules')
         if opts.on_failure then
             opts.on_failure(e)
         end

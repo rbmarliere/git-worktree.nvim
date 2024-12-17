@@ -124,10 +124,17 @@ function M.has_branch(branch, opts, cb)
         args = args,
         on_stdout = function(_, data)
             local current = data:match('^refs/heads/(.+)') or data:match('^refs/remotes/(.+)')
+            Log.debug('%s == %s ? %s', current, branch, current == branch)
             found = found or current == branch
         end,
         cwd = vim.loop.cwd(),
+        on_start = function()
+            Log.debug('has_branch :: branch: %s', branch)
+            Log.debug('git %s', table.concat(args, ' '))
+        end,
     }
+
+    Log.debug('%s', found)
 
     -- TODO: I really don't want status's spread everywhere... seems bad
     job:after(function()
@@ -138,7 +145,7 @@ end
 --- @param path string
 --- @param branch string?
 --- @param found_branch boolean
---- @param upstream string
+--- @param upstream string?
 --- @param found_upstream boolean
 --- @return Job
 function M.create_worktree_job(path, branch, found_branch, upstream, found_upstream)
@@ -169,6 +176,14 @@ function M.create_worktree_job(path, branch, found_branch, upstream, found_upstr
         args = worktree_add_args,
         cwd = vim.loop.cwd(),
         on_start = function()
+            Log.debug(
+                'create_worktree_job :: path %s branch %s found_branch %s upstream %s found_upstream %s',
+                path,
+                branch,
+                found_branch,
+                upstream,
+                found_upstream
+            )
             Log.debug(worktree_add_cmd .. ' ' .. table.concat(worktree_add_args, ' '))
         end,
     }

@@ -40,6 +40,10 @@ vim.g.git_worktree = vim.g.git_worktree
 
 local GitWorktreeDefaultConfig = {
 
+    -- minimum message level to log
+    --- @type string
+    log_level = 'WARN',
+
     -- command to change directory on your OS.
     --- @type string
     change_directory_command = 'cd',
