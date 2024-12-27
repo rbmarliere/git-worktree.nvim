@@ -284,17 +284,19 @@ end
 -- @return nil
 local telescope_git_worktree = function(opts)
     opts = opts or {}
+    opts.path_display = { 'tail' }
     local output = utils.get_os_command_output { 'git', 'worktree', 'list', '--porcelain' }
     local results = {}
     local widths = {
         path = 0,
-        sha = 0,
         branch = 0,
+        sha = 0,
     }
 
     -- if within a worktree, the base repo dir is seen
     -- as the main worktree with a sha but should not be shown
     local root = Git.gitroot_dir()
+    local current = vim.loop.cwd()
 
     local entry = {}
     local index = 1
@@ -303,7 +305,8 @@ local telescope_git_worktree = function(opts)
             if entry.path ~= root then
                 for key, val in pairs(widths) do
                     if key == 'path' then
-                        local path_len = strings.strdisplaywidth(entry[key] or '')
+                        local path, _ = utils.transform_path(opts, entry.path)
+                        local path_len = strings.strdisplaywidth(path or '')
                         widths[key] = math.max(val, path_len)
                     else
                         widths[key] = math.max(val, strings.strdisplaywidth(entry[key] or ''))
@@ -320,15 +323,13 @@ local telescope_git_worktree = function(opts)
             end
             local sha = string.match(line, '^HEAD%s+(.+)$')
             if sha then
-                entry.sha = sha
+                entry.sha = sha:sub(0, 12)
             end
             local branch = string.match(line, '^branch refs/heads/(.+)$')
             if branch then
-                entry.branch = branch
-            end
-            local detached = string.match(line, '^detached$')
-            if detached then
-                entry.branch = detached
+                entry.branch = string.format('[%s]', branch)
+            elseif string.find(line, '^detached$') then
+                entry.branch = "(detached HEAD)"
             end
         end
     end
@@ -340,18 +341,21 @@ local telescope_git_worktree = function(opts)
     local displayer = require('telescope.pickers.entry_display').create {
         separator = ' ',
         items = {
-            { width = widths.branch },
             { width = widths.path },
             { width = widths.sha },
+            { width = widths.branch },
         },
     }
 
     local make_display = function(entry)
         local path, _ = utils.transform_path(opts, entry.path)
+        if entry.path == current then
+            path = '.'
+        end
         return displayer {
-            { entry.branch, 'TelescopeResultsIdentifier' },
-            { path },
+            { path, 'TelescopeResultsIdentifier' },
             { entry.sha },
+            { entry.branch },
         }
     end
 
@@ -361,7 +365,7 @@ local telescope_git_worktree = function(opts)
             finder = finders.new_table {
                 results = results,
                 entry_maker = function(entry)
-                    entry.value = entry.branch
+                    entry.value = entry.path
                     entry.ordinal = entry.branch
                     entry.display = make_display
                     return entry
