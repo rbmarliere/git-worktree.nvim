@@ -300,12 +300,16 @@ function M.parse_head(path)
     }
 
     local stdout, code = job:sync()
+    local ret = nil
+    if stdout and #stdout > 0 then
+        ret = table.concat(stdout, '')
+    end
     if code ~= 0 then
-        Log.error('Error in parsing the HEAD: code:' .. tostring(code) .. ' out: ' .. table.concat(stdout, '') .. '.')
+        Log.error('Error in parsing HEAD: code: %s out %s.', tostring(code), ret)
         return nil
     end
 
-    return table.concat(stdout, '')
+    return ret
 end
 
 --- @param path string
@@ -321,14 +325,16 @@ function M.current_branch(path)
     }
 
     local stdout, code = job:sync()
+    local ret = nil
+    if stdout and #stdout > 0 then
+        ret = table.concat(stdout, '')
+    end
     if code ~= 0 then
-        Log.error(
-            'Error in getting current branch: code:' .. tostring(code) .. ' out: ' .. table.concat(stdout, '') .. '.'
-        )
+        Log.error('Error in getting current branch: code: %s out %s.', tostring(code), ret)
         return nil
     end
 
-    return table.concat(stdout, '')
+    return ret
 end
 
 --- @param branch string
