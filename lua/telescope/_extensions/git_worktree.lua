@@ -74,7 +74,7 @@ end
 -- Ask user for confirmation
 -- @return boolean: whether the deletion is confirmed
 local confirm = function(label)
-    local confirmed = vim.fn.input(label)
+    local confirmed = vim.fn.input(string.format('%s [y|N]: ', label))
 
     if string.sub(string.lower(confirmed), 0, 1) == 'y' then
         return true
@@ -88,15 +88,14 @@ end
 local delete_success_handler = function(opts)
     opts = opts or {}
     force_next_deletion = false
-    if
-        opts.branch ~= nil
-        and opts.branch ~= 'HEAD'
-        and confirm('Worktree deleted, now force deletion of branch? [y/n]: ')
-    then
+    if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm('Worktree deleted, now force deletion of branch?') then
         local delete_branch_job = Git.delete_branch_job(opts.branch)
         if delete_branch_job ~= nil then
             delete_branch_job:after_success(vim.schedule_wrap(function()
                 print('Branch deleted')
+            end))
+            delete_branch_job:after_failure(vim.schedule_wrap(function()
+                print('Unable to delete branch')
             end))
             delete_branch_job:start()
         end
@@ -134,7 +133,7 @@ end
 
 local move_success_handler = function(opts)
     opts = opts or {}
-    if confirm('Worktree moved, now rename branch? [y/n]: ') then
+    if confirm('Worktree moved, now rename branch?') then
         local new_branch = vim.fn.input('New branch name > ', opts.branch)
         if new_branch == '' or new_branch == opts.branch then
             Log.error('No branch name provided')
@@ -206,28 +205,37 @@ local create_input_prompt = function(opts, cb)
     end
 
     local re = string.format('git branch --remotes --list %s', opts.branch)
-    local remote_branch = vim.fn.systemlist(re)
-    if #remote_branch == 1 then
+    local branch = vim.fn.systemlist(re)
+    if #branch == 1 then
         cb(path, opts.branch)
         return
     end
 
-    local confirmed = vim.fn.input('Track an upstream? [y/n]: ')
-    if string.sub(string.lower(confirmed), 0, 1) == 'y' then
-        opts.attach_mappings = function()
-            actions.select_default:replace(function(prompt_bufnr, _)
-                local selected_entry = action_state.get_selected_entry()
-                local current_line = action_state.get_current_line()
-                actions.close(prompt_bufnr)
-                local upstream = selected_entry ~= nil and selected_entry.value or current_line
-                cb(path, upstream)
-            end)
-            return true
-        end
-        require('telescope.builtin').git_branches(opts)
-    else
+    if not confirm('Track an upstream?') then
         cb(path, nil)
+        return
     end
+
+    re = string.format('git branch --list %s', opts.branch)
+    branch = vim.fn.systemlist(re)
+    if #branch == 1 then
+        if not confirm('Overwrite upstream of existing branch?') then
+            cb(path, nil)
+            return
+        end
+    end
+
+    opts.attach_mappings = function()
+        actions.select_default:replace(function(prompt_bufnr, _)
+            local selected_entry = action_state.get_selected_entry()
+            local current_line = action_state.get_current_line()
+            actions.close(prompt_bufnr)
+            local upstream = selected_entry ~= nil and selected_entry.value or current_line
+            cb(path, upstream)
+        end)
+        return true
+    end
+    require('telescope.builtin').git_branches(opts)
 end
 
 -- Create a worktree
@@ -329,7 +337,7 @@ local telescope_git_worktree = function(opts)
             if branch then
                 entry.branch = string.format('[%s]', branch)
             elseif string.find(line, '^detached$') then
-                entry.branch = "(detached HEAD)"
+                entry.branch = '(detached HEAD)'
             end
         end
     end

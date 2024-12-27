@@ -86,14 +86,15 @@ end
 ---@param branch string
 ---@param upstream? string
 function M.create(path, branch, upstream)
-    local schedule = function(_path, _branch, _found_branch, _upstream, _found_upstream)
+    local schedule = function(cb, _path, _branch, _found_branch, _upstream, _found_upstream)
         local create_wt_job = Git.create_worktree_job(_path, _branch, _found_branch, _upstream, _found_upstream)
-        create_wt_job:after_success(function()
-            vim.schedule(function()
-                Hooks.emit(Hooks.type.CREATE, path, branch, upstream)
-                M.switch(path)
-            end)
-        end)
+        create_wt_job:after_success(vim.schedule_wrap(function()
+            Hooks.emit(Hooks.type.CREATE, path, branch, upstream)
+            if cb then
+                cb()
+            end
+            M.switch(path)
+        end))
         create_wt_job:start()
     end
 
@@ -105,13 +106,13 @@ function M.create(path, branch, upstream)
 
         if branch == '' then
             -- detached head
-            schedule(path, nil, false, nil, false)
+            schedule(nil, path, nil, false, nil, false)
             return
         end
 
         if upstream == nil then
             Git.has_branch(branch, nil, function(found_branch)
-                schedule(path, branch, found_branch, nil, false)
+                schedule(nil, path, branch, found_branch, nil, false)
             end)
             return
         end
@@ -122,11 +123,16 @@ function M.create(path, branch, upstream)
                 branch = branch:match('([^/]+)$')
             end
             Git.has_branch(branch, nil, function(found_branch)
+                local cb = nil
                 if found_upstream and found_branch then
-                    Log.error('Branch "%s" already exists', branch)
-                    return
+                    -- if upstream was selected for an existing branch,
+                    -- overwrite the current one by scheduling a `git branch -u` later
+                    local setbranch_job = Git.setbranch_job(path, branch, upstream)
+                    cb = function()
+                        setbranch_job:start()
+                    end
                 end
-                schedule(path, branch, found_branch, upstream, found_upstream)
+                schedule(cb, path, branch, found_branch, upstream, found_upstream)
             end)
         end)
     end)
