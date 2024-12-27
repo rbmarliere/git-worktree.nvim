@@ -71,16 +71,15 @@ local confirm_worktree_deletion = function(forcing)
     return false
 end
 
--- Confirm the deletion of a worktree
+-- Ask user for confirmation
 -- @return boolean: whether the deletion is confirmed
-local confirm_branch_deletion = function()
-    local confirmed = vim.fn.input('Worktree deleted, now force deletion of branch? [y/n]: ')
+local confirm = function(label)
+    local confirmed = vim.fn.input(label)
 
     if string.sub(string.lower(confirmed), 0, 1) == 'y' then
         return true
     end
 
-    print("Didn't delete branch")
     return false
 end
 
@@ -89,7 +88,11 @@ end
 local delete_success_handler = function(opts)
     opts = opts or {}
     force_next_deletion = false
-    if opts.branch ~= nil and opts.branch ~= 'HEAD' and confirm_branch_deletion() then
+    if
+        opts.branch ~= nil
+        and opts.branch ~= 'HEAD'
+        and confirm('Worktree deleted, now force deletion of branch? [y/n]: ')
+    then
         local delete_branch_job = Git.delete_branch_job(opts.branch)
         if delete_branch_job ~= nil then
             delete_branch_job:after_success(vim.schedule_wrap(function()
@@ -125,6 +128,55 @@ local delete_worktree = function(prompt_bufnr)
         git_worktree.delete_worktree(selected, force_next_deletion, {
             on_failure = delete_failure_handler,
             on_success = delete_success_handler,
+        })
+    end
+end
+
+local move_success_handler = function(opts)
+    opts = opts or {}
+    if confirm('Worktree moved, now rename branch? [y/n]: ') then
+        local new_branch = vim.fn.input('New branch name > ', opts.branch)
+        if new_branch == '' or new_branch == opts.branch then
+            Log.error('No branch name provided')
+            return
+        end
+
+        local rename_branch_job = Git.rename_branch_job(opts.branch, new_branch)
+        rename_branch_job:after_success(vim.schedule_wrap(function()
+            print('Branch renamed')
+        end))
+        rename_branch_job:after_failure(function()
+            Log.error('Unable to rename branch')
+        end)
+        rename_branch_job:start()
+    end
+end
+
+-- Move the selected worktree
+-- @param prompt_bufnr number: the prompt buffer number
+-- @return nil
+local move_worktree = function(prompt_bufnr)
+    local selected = get_worktree_path(prompt_bufnr)
+    actions.close(prompt_bufnr)
+    if selected == nil then
+        return
+    end
+
+    local current = vim.loop.cwd()
+    if current == selected then
+        git_worktree.switch_worktree(Git.gitroot_dir())
+    end
+
+    local new_path = vim.fn.input('Path to subtree > ', selected)
+    if new_path == '' or new_path == selected then
+        Log.error('No worktree path provided')
+        return
+    end
+
+    if selected ~= new_path then
+        git_worktree.move_worktree(selected, new_path, {
+            -- on_failure = ?
+            on_success = move_success_handler,
         })
     end
 end
@@ -325,6 +377,8 @@ local telescope_git_worktree = function(opts)
                 map('n', '<m-c>', function()
                     telescope_create_worktree {}
                 end)
+                map('i', '<m-r>', move_worktree)
+                map('n', '<m-r>', move_worktree)
                 map('i', '<m-d>', delete_worktree)
                 map('n', '<m-d>', delete_worktree)
                 map('i', '<c-f>', toggle_forced_deletion)

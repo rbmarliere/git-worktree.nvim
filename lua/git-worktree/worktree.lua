@@ -168,11 +168,63 @@ function M.delete(path, force, opts)
                 opts.on_failure(e)
             end
 
-            failure(delete.cmd, vim.loop.cwd())(e)
+            failure(delete.command, vim.loop.cwd())(e)
         end)
         Log.info('delete start job')
         delete:start()
     end)
+end
+
+--- MOVE ---
+
+--Move a worktree
+---@param path string
+---@param new_path string
+---@param opts any
+function M.move(path, new_path, opts)
+    if Path:new(new_path):exists() then
+        Log.error('The destination dir %s already exists', new_path)
+        return
+    end
+
+    local branch = Git.current_branch(path)
+
+    -- `git worktree move` only works if there are no submodules...
+    local ret, err = os.rename(path, new_path)
+    if not ret then
+        Log.error('Error renaming dir: %s', err)
+        return
+    end
+
+    local reinit_submodules = Git.init_submodules_job(new_path)
+    reinit_submodules:after_success(vim.schedule_wrap(function()
+        local repair = Git.repair_worktree_job(new_path)
+        repair:after_success(vim.schedule_wrap(function()
+            Log.info('move after success')
+            Hooks.emit(Hooks.type.MOVE, path)
+            if opts.on_success then
+                opts.on_success { branch = branch, new_path = new_path }
+            end
+        end))
+        repair:after_failure(function(e)
+            Log.info('move after failure')
+            if opts.on_failure then
+                opts.on_failure(e)
+            end
+
+            failure(repair.command, vim.loop.cwd())(e)
+        end)
+        repair:start()
+    end))
+    reinit_submodules:after_failure(function(e)
+        Log.info('move after failure')
+        if opts.on_failure then
+            opts.on_failure(e)
+        end
+
+        failure(reinit_submodules.command, vim.loop.cwd())(e)
+    end)
+    reinit_submodules:start()
 end
 
 return M

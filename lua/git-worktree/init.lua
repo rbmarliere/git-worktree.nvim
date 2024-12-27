@@ -2,7 +2,7 @@
 
 ---@mod intro Introduction
 ---@brief [[
---- A plugin  that helps to use git worktree operations, create, switch, and delete in neovim.
+--- A plugin that helps to use git worktree operations, create, switch, delete and move in neovim.
 ---@brief ]]
 ---
 ---@mod git-worktree
@@ -42,6 +42,14 @@ end
 ---@param opts any
 function M.delete_worktree(path, force, opts)
     Worktree.delete(path, force, opts)
+end
+
+--Move a worktree
+---@param path string
+---@param new_path string
+---@param opts any
+function M.move_worktree(path, new_path, opts)
+    Worktree.move(path, new_path, opts)
 end
 
 return M

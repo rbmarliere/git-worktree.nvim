@@ -7,12 +7,14 @@ M.type = {
     CREATE = 'CREATE',
     DELETE = 'DELETE',
     SWITCH = 'SWITCH',
+    MOVE = 'MOVE',
 }
 
 local hooks = {
     [M.type.CREATE] = {},
     [M.type.DELETE] = {},
     [M.type.SWITCH] = {},
+    [M.type.MOVE] = {},
 }
 local count = 0
 

@@ -196,6 +196,36 @@ function M.delete_worktree_job(path, force)
 end
 
 --- @param path string
+function M.repair_worktree_job(path)
+    local worktree_repair_cmd = 'git'
+    local worktree_repair_args = { 'worktree', 'repair' }
+
+    return Job:new {
+        command = worktree_repair_cmd,
+        args = worktree_repair_args,
+        cwd = path,
+        on_start = function()
+            Log.debug('git -C %s worktree repair', path)
+        end,
+    }
+end
+
+--- @param path string
+function M.init_submodules_job(path)
+    local worktree_submodule_job = 'git'
+    local worktree_submodule_args = { 'submodule', 'update', '--init', '--recursive' }
+
+    return Job:new {
+        command = worktree_submodule_job,
+        args = worktree_submodule_args,
+        cwd = path,
+        on_start = function()
+            Log.debug('git -C %s' .. table.concat(worktree_submodule_args, ' '), path)
+        end,
+    }
+end
+
+--- @param path string
 --- @return Job
 function M.fetchall_job(path)
     return Job:new {
@@ -286,7 +316,7 @@ function M.current_branch(path)
         args = { 'branch', '--show-current' },
         cwd = path,
         on_start = function()
-            Log.debug('git branch --show-current')
+            Log.debug('git -C %s branch --show-current', path)
         end,
     }
 
@@ -321,6 +351,20 @@ function M.delete_branch_job(branch)
         cwd = M.gitroot_dir(),
         on_start = function()
             Log.debug('git branch -D')
+        end,
+    }
+end
+
+--- @param branch string
+--- @param new_branch string
+--- @return Job
+function M.rename_branch_job(branch, new_branch)
+    return Job:new {
+        command = 'git',
+        args = { 'branch', '-m', branch, new_branch },
+        cwd = M.gitroot_dir(),
+        on_start = function()
+            Log.debug('git branch -m %s %s', branch, new_branch)
         end,
     }
 end
