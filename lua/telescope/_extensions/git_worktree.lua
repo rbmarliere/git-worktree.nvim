@@ -15,9 +15,13 @@ local force_next_deletion = false
 
 -- Get the path of the selected worktree
 -- @param prompt_bufnr number: the prompt buffer number
--- @return string: the path of the selected worktree
+-- @return string?: the path of the selected worktree
 local get_worktree_path = function(prompt_bufnr)
     local selection = action_state.get_selected_entry(prompt_bufnr)
+    if selection == nil then
+        vim.print('No worktree selected')
+        return
+    end
     return selection.path
 end
 
@@ -27,7 +31,6 @@ end
 local switch_worktree = function(prompt_bufnr)
     local worktree_path = get_worktree_path(prompt_bufnr)
     if worktree_path == nil then
-        vim.print('No worktree selected')
         return
     end
     actions.close(prompt_bufnr)
@@ -114,12 +117,17 @@ end
 -- @return nil
 local delete_worktree = function(prompt_bufnr)
     -- TODO: confirm_deletion(forcing)
+    local selected = get_worktree_path(prompt_bufnr)
+    if selected == nil then
+        return
+    end
+
     if not confirm_worktree_deletion() then
         return
     end
 
-    local selected = get_worktree_path(prompt_bufnr)
     actions.close(prompt_bufnr)
+
     if selected ~= nil then
         local current = vim.loop.cwd()
         if current == selected then
@@ -157,10 +165,10 @@ end
 -- @return nil
 local move_worktree = function(prompt_bufnr)
     local selected = get_worktree_path(prompt_bufnr)
-    actions.close(prompt_bufnr)
     if selected == nil then
         return
     end
+    actions.close(prompt_bufnr)
 
     local current = vim.loop.cwd()
     if current == selected then
