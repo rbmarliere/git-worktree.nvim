@@ -72,10 +72,10 @@ function M.switch(path)
             return
         end
 
-        vim.schedule(function()
+        vim.defer_fn(function()
             local prev_path = change_dirs(path)
             Hooks.emit(Hooks.type.SWITCH, path, prev_path)
-        end)
+        end, 500)
     end)
 end
 
