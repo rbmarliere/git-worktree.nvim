@@ -23,7 +23,23 @@ local function change_dirs(path)
     if Path:new(worktree_path):exists() then
         local cmd = string.format('%s %s', Config.change_directory_command, worktree_path)
         Log.debug('Changing to directory  %s', worktree_path)
+        vim.api.nvim_exec_autocmds('DirChangedPre', {
+            pattern = '*',
+            data = {
+                changed_window = false,
+                directory = worktree_path,
+                scope = 'global',
+            },
+        })
         vim.cmd(cmd)
+        vim.api.nvim_exec_autocmds('DirChanged', {
+            pattern = '*',
+            data = {
+                changed_window = false,
+                cwd = worktree_path,
+                scope = 'global',
+            },
+        })
     else
         Log.error('Could not change to directory: %s', worktree_path)
     end
