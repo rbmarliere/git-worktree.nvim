@@ -382,8 +382,8 @@ local telescope_git_worktree = function(opts)
             finder = finders.new_table {
                 results = results,
                 entry_maker = function(entry)
-                    entry.value = entry.path
-                    entry.ordinal = entry.branch
+                    entry.value = entry.branch
+                    entry.ordinal = entry.path
                     entry.display = make_display
                     return entry
                 end,
